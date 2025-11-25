@@ -5,7 +5,14 @@ import {
   PopoverPanel,
   Transition,
 } from '@headlessui/react';
-import { CopyPlus, File, LoaderCircle, Plus, Trash } from 'lucide-react';
+import {
+  CopyPlus,
+  File,
+  LoaderCircle,
+  Paperclip,
+  Plus,
+  Trash,
+} from 'lucide-react';
 import { Fragment, useRef, useState } from 'react';
 import { File as FileType } from '../ChatWindow';
 import { useChat } from '@/lib/hooks/useChat';
@@ -25,12 +32,12 @@ const AttachSmall = () => {
     }
 
     const embeddingModelProvider = localStorage.getItem(
-      'embeddingModelProvider',
+      'embeddingModelProviderId',
     );
-    const embeddingModel = localStorage.getItem('embeddingModel');
+    const embeddingModel = localStorage.getItem('embeddingModelKey');
 
-    data.append('embedding_model_provider', embeddingModelProvider!);
-    data.append('embedding_model', embeddingModel!);
+    data.append('embedding_model_provider_id', embeddingModelProvider!);
+    data.append('embedding_model_key', embeddingModel!);
 
     const res = await fetch(`/api/uploads`, {
       method: 'POST',
@@ -45,7 +52,7 @@ const AttachSmall = () => {
   };
 
   return loading ? (
-    <div className="flex flex-row items-center justify-between space-x-1 p-1">
+    <div className="flex flex-row items-center justify-between space-x-1 p-1 ">
       <LoaderCircle size={20} className="text-sky-400 animate-spin" />
     </div>
   ) : files.length > 0 ? (
@@ -108,7 +115,10 @@ const AttachSmall = () => {
                   className="flex flex-row items-center justify-start w-full space-x-3 p-3"
                 >
                   <div className="bg-light-100 dark:bg-dark-100 flex items-center justify-center w-10 h-10 rounded-md">
-                    <File size={16} className="text-black/70 dark:text-white/70" />
+                    <File
+                      size={16}
+                      className="text-black/70 dark:text-white/70"
+                    />
                   </div>
                   <p className="text-black/70 dark:text-white/70 text-sm">
                     {file.fileName.length > 25
@@ -138,7 +148,7 @@ const AttachSmall = () => {
         multiple
         hidden
       />
-      <CopyPlus size={20} />
+      <Paperclip size={16} />
     </button>
   );
 };

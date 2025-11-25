@@ -11,12 +11,12 @@ import {
   RunnableMap,
   RunnableSequence,
 } from '@langchain/core/runnables';
-import { BaseMessage } from '@langchain/core/messages';
+import { BaseMessage, BaseMessageLike } from '@langchain/core/messages';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import LineListOutputParser from '../outputParsers/listLineOutputParser';
 import LineOutputParser from '../outputParsers/lineOutputParser';
 import { getDocumentsFromLinks } from '../utils/documents';
-import { Document } from 'langchain/document';
+import { Document } from '@langchain/core/documents';
 import { searchSearxng } from '../searxng';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -40,9 +40,9 @@ export interface MetaSearchAgentType {
 interface Config {
   searchWeb: boolean;
   rerank: boolean;
-  summarizer: boolean;
   rerankThreshold: number;
   queryGeneratorPrompt: string;
+  queryGeneratorFewShots: BaseMessageLike[];
   responsePrompt: string;
   activeEngines: string[];
 }
@@ -64,7 +64,22 @@ class MetaSearchAgent implements MetaSearchAgentType {
     (llm as unknown as ChatOpenAI).temperature = 0;
 
     return RunnableSequence.from([
-      PromptTemplate.fromTemplate(this.config.queryGeneratorPrompt),
+      ChatPromptTemplate.fromMessages([
+        ['system', this.config.queryGeneratorPrompt],
+        ...this.config.queryGeneratorFewShots,
+        [
+          'user',
+          `
+        <conversation>
+        {chat_history}
+        </conversation>
+
+        <query>
+        {query}
+        </query>
+       `,
+        ],
+      ]),
       llm,
       this.strParser,
       RunnableLambda.from(async (input: string) => {
@@ -77,9 +92,7 @@ class MetaSearchAgent implements MetaSearchAgentType {
         });
 
         const links = await linksOutputParser.parse(input);
-        let question = this.config.summarizer
-          ? await questionOutputParser.parse(input)
-          : input;
+        let question = (await questionOutputParser.parse(input)) ?? input;
 
         if (question === 'not_needed') {
           return { query: '', docs: [] };
@@ -440,7 +453,6 @@ class MetaSearchAgent implements MetaSearchAgentType {
         event.event === 'on_chain_end' &&
         event.name === 'FinalSourceRetriever'
       ) {
-        ``;
         emitter.emit(
           'data',
           JSON.stringify({ type: 'sources', data: event.data.output }),
